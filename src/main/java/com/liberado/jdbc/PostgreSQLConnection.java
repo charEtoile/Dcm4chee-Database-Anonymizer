@@ -21,12 +21,12 @@ public class PostgreSQLConnection{
     /**
      * Database user
      */
-    private static String user = "pacs";
+    private static String user = "postgres";
 
     /**
      * Database user password
      */
-    private static String passwd = "pacs";
+    private static String passwd = "postgres";
 
     /**
      * Connection object

@@ -9,6 +9,8 @@ package com.liberado.dao;
  */
 
 import java.sql.Connection;
+import java.util.List;
+
 import com.liberado.jdbc.PostgreSQLConnection;
 
 public abstract class DAO<T> {
@@ -40,4 +42,10 @@ public abstract class DAO<T> {
      * @param obj
      */
     public abstract void delete(T obj);
+
+    /**
+     * Return a list of all items in the database
+     * @return all items
+     */
+    public abstract List<T> findAll();
 }

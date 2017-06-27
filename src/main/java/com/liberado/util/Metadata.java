@@ -10,19 +10,23 @@
  *
  * design pattern DAO
  * http://cyrille-herby.developpez.com/tutoriels/java/mapper-sa-base-donnees-avec-pattern-dao/
+ *
+ * Type List vs type ArrayList in Java
+ * https://stackoverflow.com/questions/2279030/type-list-vs-type-arraylist-in-java
  */
 package com.liberado.util;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Date;
+import java.util.*;
 import java.util.logging.Logger;
 
 import com.liberado.bean.Patient;
 import com.liberado.dao.DAO;
 import com.liberado.dao.concrete.PatientDAO;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.lang.CharSet;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.dcm4che.data.*;
 import org.dcm4che.dict.Tags;
@@ -44,10 +48,68 @@ public class Metadata {
             //System.out.println(getDataset(args[0]));
         }
 
+        // Create a new Patient DAO
         DAO<Patient> patientDao = new PatientDAO();
+        // Take the first patient in the database
         Patient pat = patientDao.find(1);
+        List<Patient> patients = patientDao.findAll();
+        System.out.println("I found " + patients.size() + "elements");
+
+        List<String> patientsName = new ArrayList<String>();
+        int i = 1;
+        for (Patient aPatient : patients) {
+            Dataset ds = fromByteArray(aPatient.getPat_attrs());
+            String name = ds.getPersonName(Tags.PatientName).get(PersonName.FAMILY);
+            patientsName.add(name);
+            if (++i == 20) break;
+        }
+
+        System.out.println("Noms avant shuffle");
+        System.out.println(Arrays.toString(patientsName.toArray()));
+
+
+        Collections.shuffle(patientsName);
+        System.out.println("Noms après shuffle");
+        System.out.println(Arrays.toString(patientsName.toArray()));
+
+
+        //long seed = System.nanoTime();
+        //Collections.shuffle(list, new Random(seed));
+
+        // Print its DICOM attributes
         System.out.println("Patient avant modif");
         System.out.println(pat.getDecodedPat_attrs());
+
+        /*
+        0000 (0008,0005) CS #10 *1 [ISO_IR 100] //Specific Character Set
+        0018 (0010,0010) PN #22 *1 [VALETUDIE^JEAN CLAUDE ] //Patient's Name
+        0048 (0010,0020) LO #12 *1 [A10008394368] //Patient ID
+        0068 (0010,0021) LO #10 *1 [930300645 ] //Issuer of Patient ID
+        0086 (0010,0030) DA #8 *1 [19520607] //Patient's Birth Date
+        0102 (0010,0040) CS #2 *1 [M ] //Patient's Sex
+        */
+
+
+        // Get the Dataset from the patient byte array. Note : interface Dataset extends DcmObject, Serializable
+        Dataset ds = fromByteArray(pat.getPat_attrs());
+
+        if (ds != null) {
+
+            // <mystuff>
+            PersonName personName = ds.getPersonName(Tags.PatientName);
+            System.out.println("avant:" + personName.toString());
+            personName.set(PersonName.FAMILY, "TOTO");
+            System.out.println("apres:" + personName.toString());
+            ds.putCS(Tags.PatientName, personName.toString());
+            pat.setPat_attrs(toByteArray(ds));
+
+            System.out.println("Patient apres modif");
+            System.out.println(pat.getDecodedPat_attrs());
+
+            // </mystuff>
+        }
+
+
 
         //pat.setPat_name("toto");
         //patientDao.update(pat);
@@ -93,21 +155,10 @@ public class Metadata {
 
             if (ds != null) {
 
-                // <mystuff>
-                PersonName personName = ds.getPersonName(Tags.PatientName);
-                System.out.println(personName.toString());
-
-                System.out.println(personName.get(PersonName.FAMILY) + ";" +
-                        personName.get(PersonName.GIVEN) + ";" +
-                        personName.get(PersonName.GIVEN) + ";" +
-                        personName.get(PersonName.SUFFIX));
-                // </mystuff>
-
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
                 try {
                     ds.dumpDataset(baos, null);
-
                     result = baos.toString();
 
                 } catch (IOException ioe) {

@@ -1,6 +1,8 @@
 package com.liberado.dao.concrete;
 
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 import com.liberado.bean.Patient;
 import com.liberado.dao.DAO;
@@ -12,6 +14,7 @@ import static com.liberado.util.Metadata.getDataset;
  */
 public class PatientDAO extends DAO<Patient> {
 
+    @Override
     public Patient create(Patient obj) {
         /*try {
 
@@ -72,7 +75,7 @@ public class PatientDAO extends DAO<Patient> {
 */
 
 
-
+    @Override
     public Patient find(long id) {
         Patient patient = new Patient();
         try {
@@ -102,10 +105,9 @@ public class PatientDAO extends DAO<Patient> {
             e.printStackTrace();
         }
         return patient;
-
     }
 
-
+    @Override
     public Patient update(Patient obj) {
         try {
 
@@ -123,7 +125,7 @@ public class PatientDAO extends DAO<Patient> {
         return obj;
     }
 
-
+    @Override
     public void delete(Patient obj) {
         /*try {
 
@@ -138,5 +140,41 @@ public class PatientDAO extends DAO<Patient> {
         } catch (SQLException e) {
             e.printStackTrace();
         }*/
+    }
+
+    @Override
+    public List<Patient> findAll() {
+        List<Patient> patients = new ArrayList<Patient>();
+
+        try {
+            ResultSet result = this.connect.createStatement(
+                    ResultSet.TYPE_SCROLL_INSENSITIVE,
+                    ResultSet.CONCUR_UPDATABLE)
+                    .executeQuery("SELECT * FROM patient");
+
+            while (result.next()) {
+                Patient patient = new Patient();
+                patient.setPk(result.getLong("pk"));
+                patient.setMerge_fk(result.getLong("merge_fk"));
+                patient.setPat_id(result.getString("pat_id"));
+                patient.setPat_id_issuer(result.getString("pat_id_issuer"));
+                patient.setPat_name(result.getString("pat_name"));
+                patient.setPat_i_name(result.getString("pat_i_name"));
+                patient.setPat_p_name(result.getString("pat_p_name"));
+                patient.setPat_birthdate(result.getString("pat_birthdate"));
+                patient.setPat_sex(result.getString("pat_sex"));
+                patient.setPat_custom1(result.getString("pat_custom1"));
+                patient.setPat_custom2(result.getString("pat_custom1"));
+                patient.setPat_custom3(result.getString("pat_custom1"));
+                patient.setCreated_time(result.getTimestamp("created_time"));
+                patient.setUpdated_time(result.getTimestamp("updated_time"));
+                patient.setPat_attrs(result.getBytes("pat_attrs"));
+                patients.add(patient);
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return patients;
     }
 }
