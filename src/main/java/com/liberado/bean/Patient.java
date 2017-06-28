@@ -157,12 +157,12 @@ public class Patient {
 
     public Patient(){}
 
-    public String toString(){
+    @Override
+    public String toString() {
         return "PATIENT : " + this.pat_name;
     }
 
     public String getDecodedPat_attrs(){
         return Metadata.getDataset(this.pat_attrs);
     }
-
 }

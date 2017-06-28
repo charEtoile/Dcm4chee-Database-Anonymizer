@@ -7,8 +7,6 @@ import java.util.List;
 import com.liberado.bean.Patient;
 import com.liberado.dao.DAO;
 
-import static com.liberado.util.Metadata.getDataset;
-
 /**
  * Created by admin on 22/06/2017.
  */
@@ -109,13 +107,40 @@ public class PatientDAO extends DAO<Patient> {
 
     @Override
     public Patient update(Patient obj) {
-        try {
 
+        String stmt = "UPDATE patient SET (" +
+                "merge_fk," +
+                "pat_id," +
+                "pat_id_issuer," +
+                "pat_name," +
+                "pat_i_name," +
+                "pat_p_name," +
+                "pat_birthdate," +
+                "pat_sex," +
+                "pat_custom1," +
+                "pat_custom2," +
+                "pat_custom3," +
+                //"created_time," +
+                //"updated_time," +
+                "pat_attrs) = (" +
+                obj.getMerge_fk() + ", " +
+                "'" + obj.getPat_id() + "', " +
+                "'" + obj.getPat_id_issuer() + "', " +
+                "'" + obj.getPat_name() + "', " +
+                "'" + obj.getPat_i_name() + "', " +
+                "'" + obj.getPat_p_name() + "', " +
+                "'" + obj.getPat_birthdate() + "', " +
+                "'" + obj.getPat_sex() + "', " +
+                "'" + obj.getPat_custom1() + "', " +
+                "'" + obj.getPat_custom2() + "', " +
+                "'" + obj.getPat_custom3() + "', " +
+                " WHERE pk = " + obj.getPk();
+
+        try {
             this.connect.createStatement(
                                     ResultSet.TYPE_SCROLL_INSENSITIVE,
-                                    ResultSet.CONCUR_UPDATABLE).executeUpdate(
-                                            "UPDATE patient SET pat_name = '" + obj.getPat_name() + "'" +
-                                                    " WHERE pk = " + obj.getPk());
+                                    ResultSet.CONCUR_UPDATABLE).executeUpdate(stmt);
+
 
             obj = this.find(obj.getPk());
         } catch (SQLException e) {

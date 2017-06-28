@@ -22,8 +22,10 @@ import java.io.IOException;
 import java.util.*;
 import java.util.logging.Logger;
 
+import com.liberado.bean.Mwl_item;
 import com.liberado.bean.Patient;
 import com.liberado.dao.DAO;
+import com.liberado.dao.concrete.Mwl_itemDAO;
 import com.liberado.dao.concrete.PatientDAO;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.CharSet;
@@ -48,86 +50,7 @@ public class Metadata {
             //System.out.println(getDataset(args[0]));
         }
 
-        // Create a new Patient DAO
-        DAO<Patient> patientDao = new PatientDAO();
-        // Take the first patient in the database
-        Patient pat = patientDao.find(1);
-        List<Patient> patients = patientDao.findAll();
-        System.out.println("I found " + patients.size() + "elements");
-
-        List<String> patientsName = new ArrayList<String>();
-        int i = 1;
-        for (Patient aPatient : patients) {
-            Dataset ds = fromByteArray(aPatient.getPat_attrs());
-            String name = ds.getPersonName(Tags.PatientName).get(PersonName.FAMILY);
-            patientsName.add(name);
-            if (++i == 20) break;
-        }
-
-        System.out.println("Noms avant shuffle");
-        System.out.println(Arrays.toString(patientsName.toArray()));
-
-
-        Collections.shuffle(patientsName);
-        System.out.println("Noms après shuffle");
-        System.out.println(Arrays.toString(patientsName.toArray()));
-
-
-        //long seed = System.nanoTime();
-        //Collections.shuffle(list, new Random(seed));
-
-        // Print its DICOM attributes
-        System.out.println("Patient avant modif");
-        System.out.println(pat.getDecodedPat_attrs());
-
-        /*
-        0000 (0008,0005) CS #10 *1 [ISO_IR 100] //Specific Character Set
-        0018 (0010,0010) PN #22 *1 [VALETUDIE^JEAN CLAUDE ] //Patient's Name
-        0048 (0010,0020) LO #12 *1 [A10008394368] //Patient ID
-        0068 (0010,0021) LO #10 *1 [930300645 ] //Issuer of Patient ID
-        0086 (0010,0030) DA #8 *1 [19520607] //Patient's Birth Date
-        0102 (0010,0040) CS #2 *1 [M ] //Patient's Sex
-        */
-
-
-        // Get the Dataset from the patient byte array. Note : interface Dataset extends DcmObject, Serializable
-        Dataset ds = fromByteArray(pat.getPat_attrs());
-
-        if (ds != null) {
-
-            // <mystuff>
-            PersonName personName = ds.getPersonName(Tags.PatientName);
-            System.out.println("avant:" + personName.toString());
-            personName.set(PersonName.FAMILY, "TOTO");
-            System.out.println("apres:" + personName.toString());
-            ds.putCS(Tags.PatientName, personName.toString());
-            pat.setPat_attrs(toByteArray(ds));
-
-            System.out.println("Patient apres modif");
-            System.out.println(pat.getDecodedPat_attrs());
-
-            // </mystuff>
-        }
-
-
-
-        //pat.setPat_name("toto");
-        //patientDao.update(pat);
-
-        //System.out.println("Patient après modif");
-        //System.out.println(pat);
-        //System.out.println(pat.getDecodedPat_attrs());
-
-
-
-        /*byte[] blobDicom = rs.getBytes("pat_attrs");
-        byte[] baDicom = Base64.encodeBase64(blobDicom);
-        String data = null;
-        try {
-            data = new String(baDicom, "US-ASCII");
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }*/
+        testMwl_itemDAO();
     }
 
     /**
@@ -235,5 +158,210 @@ public class Metadata {
             ds.setFileMetaInfo(prevfmi);
         }
         return bos.toByteArray();
+    }
+
+    /**
+     * Test the patientDAO stuff
+     */
+    public static void testPatientDAO() {
+
+        // Create a new Patient DAO
+        DAO<Patient> patientDao = new PatientDAO();
+        // Take all patients in the database
+        Patient pat = patientDao.find(1);
+        List<Patient> patients = patientDao.findAll();
+        System.out.println("I found " + patients.size() + "elements");
+
+        // Check the max number of dicom tags.
+        int maxDicomTagsCount = 0;
+        int indexWithMaxDicomTagsCount = -1;
+        for (Patient aPatient : patients) {
+            // Extract the dataset from the byte array and store the count of dicom tags if it is a maximum
+            Dataset ds = fromByteArray(aPatient.getPat_attrs());
+            if (ds.size() > maxDicomTagsCount) {
+                maxDicomTagsCount = ds.size();
+            }
+        }
+        System.out.println("The max number of DICOM tags int Patient is " + maxDicomTagsCount + "elements");
+
+        List<String> patientsName = new ArrayList<String>();
+        int i = 1;
+        for (Patient aPatient : patients) {
+            Dataset ds = fromByteArray(aPatient.getPat_attrs());
+            String name = ds.getPersonName(Tags.PatientName).get(PersonName.FAMILY);
+            patientsName.add(name);
+            if (++i == 5) break;
+        }
+
+        System.out.println("Noms avant shuffle");
+        System.out.println(Arrays.toString(patientsName.toArray()));
+
+
+        Collections.shuffle(patientsName);
+        System.out.println("Noms après shuffle");
+        System.out.println(Arrays.toString(patientsName.toArray()));
+
+
+        //long seed = System.nanoTime();
+        //Collections.shuffle(list, new Random(seed));
+
+        // Print its DICOM attributes
+        System.out.println("Patient avant modif");
+        System.out.println(pat.getDecodedPat_attrs());
+
+        /*
+        0000 (0008,0005) CS #10 *1 [ISO_IR 100] //Specific Character Set
+        0018 (0010,0010) PN #22 *1 [VALETUDIE^JEAN CLAUDE ] //Patient's Name
+        0048 (0010,0020) LO #12 *1 [A10008394368] //Patient ID
+        0068 (0010,0021) LO #10 *1 [930300645 ] //Issuer of Patient ID
+        0086 (0010,0030) DA #8 *1 [19520607] //Patient's Birth Date
+        0102 (0010,0040) CS #2 *1 [M ] //Patient's Sex
+        */
+
+
+        // Get the Dataset from the patient byte array. Note : interface Dataset extends DcmObject, Serializable
+        Dataset ds = fromByteArray(pat.getPat_attrs());
+
+        if (ds != null) {
+
+            // <mystuff>
+            PersonName personName = ds.getPersonName(Tags.PatientName);
+            System.out.println("avant:" + personName.toString());
+            personName.set(PersonName.FAMILY, "TOTO");
+            System.out.println("apres:" + personName.toString());
+            ds.putCS(Tags.PatientName, personName.toString());
+            pat.setPat_attrs(toByteArray(ds));
+
+            System.out.println("Patient apres modif");
+            System.out.println(pat.getDecodedPat_attrs());
+
+            // </mystuff>
+        }
+
+
+
+        //pat.setPat_name("toto");
+        //patientDao.update(pat);
+
+        //System.out.println("Patient après modif");
+        //System.out.println(pat);
+        //System.out.println(pat.getDecodedPat_attrs());
+
+
+
+        /*byte[] blobDicom = rs.getBytes("pat_attrs");
+        byte[] baDicom = Base64.encodeBase64(blobDicom);
+        String data = null;
+        try {
+            data = new String(baDicom, "US-ASCII");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }*/
+    }
+
+    /**
+     * Test the patientDAO stuff
+     */
+    public static void testMwl_itemDAO() {
+
+        DAO<Mwl_item> mwl_itemDAO = new Mwl_itemDAO();
+        Mwl_item mwl_item = mwl_itemDAO.find(1);
+        System.out.println(mwl_item.getDecodedItem_attrs());
+        List<Mwl_item> mwl_items = mwl_itemDAO.findAll();
+        System.out.println("I found " + mwl_items.size() + "elements");
+
+        // Check the min, max number of dicom tags.
+        int maxDicomTagsCount = -1;
+        int minDicomTagsCount = -1;
+        int indexWithMaxDicomTagsCount = -1;
+        for (Mwl_item anMwl_item : mwl_items) {
+            // Extract the dataset from the byte array and store the count of dicom tags if it is a maximum
+            Dataset ds = fromByteArray(anMwl_item.getItem_attrs());
+            if (minDicomTagsCount == -1 && maxDicomTagsCount == -1) {
+                minDicomTagsCount = ds.size();
+                maxDicomTagsCount = ds.size();
+            }
+            if (ds.size() > maxDicomTagsCount) {
+                maxDicomTagsCount = ds.size();
+            }
+            if (ds.size() < minDicomTagsCount) {
+                minDicomTagsCount = ds.size();
+            }
+        }
+        System.out.println("The max number of DICOM tags in MWL_item is " + maxDicomTagsCount + "elements");
+        System.out.println("The min number of DICOM tags in MWL_item is " + minDicomTagsCount + "elements");
+
+/*
+        List<String> patientsName = new ArrayList<String>();
+        int i = 1;
+        for (Patient aPatient : patients) {
+            Dataset ds = fromByteArray(aPatient.getPat_attrs());
+            String name = ds.getPersonName(Tags.PatientName).get(PersonName.FAMILY);
+            patientsName.add(name);
+            if (++i == 5) break;
+        }
+
+        System.out.println("Noms avant shuffle");
+        System.out.println(Arrays.toString(patientsName.toArray()));
+
+
+        Collections.shuffle(patientsName);
+        System.out.println("Noms après shuffle");
+        System.out.println(Arrays.toString(patientsName.toArray()));
+
+
+        //long seed = System.nanoTime();
+        //Collections.shuffle(list, new Random(seed));
+
+        // Print its DICOM attributes
+        System.out.println("Patient avant modif");
+        System.out.println(pat.getDecodedPat_attrs());
+
+        /*
+        0000 (0008,0005) CS #10 *1 [ISO_IR 100] //Specific Character Set
+        0018 (0010,0010) PN #22 *1 [VALETUDIE^JEAN CLAUDE ] //Patient's Name
+        0048 (0010,0020) LO #12 *1 [A10008394368] //Patient ID
+        0068 (0010,0021) LO #10 *1 [930300645 ] //Issuer of Patient ID
+        0086 (0010,0030) DA #8 *1 [19520607] //Patient's Birth Date
+        0102 (0010,0040) CS #2 *1 [M ] //Patient's Sex
+        */
+
+/*
+        // Get the Dataset from the patient byte array. Note : interface Dataset extends DcmObject, Serializable
+        Dataset ds = fromByteArray(pat.getPat_attrs());
+
+        if (ds != null) {
+
+            // <mystuff>
+            PersonName personName = ds.getPersonName(Tags.PatientName);
+            System.out.println("avant:" + personName.toString());
+            personName.set(PersonName.FAMILY, "TOTO");
+            System.out.println("apres:" + personName.toString());
+            ds.putCS(Tags.PatientName, personName.toString());
+            pat.setPat_attrs(toByteArray(ds));
+
+            System.out.println("Patient apres modif");
+            System.out.println(pat.getDecodedPat_attrs());
+
+            // </mystuff>
+        }
+*/
+
+
+        //pat.setPat_name("toto");
+        //patientDao.update(pat);
+
+        //System.out.println("Patient après modif");
+        //System.out.println(pat);
+        //System.out.println(pat.getDecodedPat_attrs());
+
+        /*byte[] blobDicom = rs.getBytes("pat_attrs");
+        byte[] baDicom = Base64.encodeBase64(blobDicom);
+        String data = null;
+        try {
+            data = new String(baDicom, "US-ASCII");
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }*/
     }
 }
