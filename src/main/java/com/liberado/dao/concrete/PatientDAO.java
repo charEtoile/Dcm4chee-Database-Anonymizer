@@ -108,39 +108,32 @@ public class PatientDAO extends DAO<Patient> {
     @Override
     public Patient update(Patient obj) {
 
-        String stmt = "UPDATE patient SET (" +
-                "merge_fk," +
-                "pat_id," +
-                "pat_id_issuer," +
-                "pat_name," +
-                "pat_i_name," +
-                "pat_p_name," +
-                "pat_birthdate," +
-                "pat_sex," +
-                "pat_custom1," +
-                "pat_custom2," +
-                "pat_custom3," +
-                //"created_time," +
-                //"updated_time," +
-                "pat_attrs) = (" +
-                obj.getMerge_fk() + ", " +
-                "'" + obj.getPat_id() + "', " +
-                "'" + obj.getPat_id_issuer() + "', " +
-                "'" + obj.getPat_name() + "', " +
-                "'" + obj.getPat_i_name() + "', " +
-                "'" + obj.getPat_p_name() + "', " +
-                "'" + obj.getPat_birthdate() + "', " +
-                "'" + obj.getPat_sex() + "', " +
-                "'" + obj.getPat_custom1() + "', " +
-                "'" + obj.getPat_custom2() + "', " +
-                "'" + obj.getPat_custom3() + "', " +
-                " WHERE pk = " + obj.getPk();
+        String stmt = "UPDATE patient SET (merge_fk, pat_id, pat_id_issuer, pat_name, pat_i_name, " +
+                "pat_p_name, pat_birthdate, pat_sex, pat_custom1, pat_custom2, pat_custom3, " +
+                //"created_time, updated_time," +
+                "pat_attrs) = (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) WHERE pk = 1;";
 
         try {
-            this.connect.createStatement(
+            /*this.connect.createStatement(
                                     ResultSet.TYPE_SCROLL_INSENSITIVE,
-                                    ResultSet.CONCUR_UPDATABLE).executeUpdate(stmt);
-
+                                    ResultSet.CONCUR_UPDATABLE).executeUpdate(stmt);*/
+            PreparedStatement ps = this.connect.prepareStatement(stmt, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            ps.setNull(1, Types.BIGINT/*obj.getMerge_fk()*/);
+            ps.setString(2, obj.getPat_id());
+            ps.setString(3, obj.getPat_id_issuer());
+            ps.setString(4, obj.getPat_name());
+            ps.setString(5, obj.getPat_i_name());
+            ps.setString(6, obj.getPat_p_name());
+            ps.setString(7, obj.getPat_birthdate());
+            ps.setString(8, obj.getPat_sex());
+            ps.setString(9, obj.getPat_custom1());
+            ps.setString(10, obj.getPat_custom2());
+            ps.setString(11, obj.getPat_custom3());
+            //private Timestamp created_time;
+            //private Timestamp updated_time;
+            ps.setBytes(12, obj.getPat_attrs());
+            ps.executeUpdate();
+            ps.close();
 
             obj = this.find(obj.getPk());
         } catch (SQLException e) {

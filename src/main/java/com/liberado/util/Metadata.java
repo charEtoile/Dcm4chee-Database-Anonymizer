@@ -13,6 +13,10 @@
  *
  * Type List vs type ArrayList in Java
  * https://stackoverflow.com/questions/2279030/type-list-vs-type-arraylist-in-java
+ *
+ * Anonymisation
+ * http://plastimatch.org/dicom_comparison.html
+ *
  */
 package com.liberado.util;
 
@@ -50,7 +54,9 @@ public class Metadata {
             //System.out.println(getDataset(args[0]));
         }
 
-        testMwl_itemDAO();
+        //testPatientDAO();
+        //testMwl_itemDAO();
+        testUpdatePatientInDatabase();
     }
 
     /**
@@ -163,12 +169,45 @@ public class Metadata {
     /**
      * Test the patientDAO stuff
      */
+
+    public static void testUpdatePatientInDatabase() {
+
+        // Retrieve a Patient using the PatientDAO by an id
+        DAO<Patient> patientDao = new PatientDAO();
+        Patient aPatient = patientDao.find(1);
+
+        // Print its DICOM attributes
+        System.out.println("Patient DICOM attributes from database before modification:");
+        System.out.println(aPatient.getDecodedPat_attrs());
+
+        // Get the Dataset from the patient byte array. Note : interface Dataset extends DcmObject, Serializable
+        // Modify some of the elements and put them back in the Dataset
+        Dataset ds = fromByteArray(aPatient.getPat_attrs());
+        if (ds != null) {
+            PersonName personName = ds.getPersonName(Tags.PatientName);             // Extract the PersonName object
+            aPatient.setPat_name(personName.get(PersonName.FAMILY) + "-TOTO");      // Modify in the column in 'clear'
+            personName.set(PersonName.FAMILY, aPatient.getPat_name());              // Modify in the PersonName object
+            ds.putPN(Tags.PatientName, personName);                                 // Modify in the DICOM dataset
+            aPatient.setPat_attrs(toByteArray(ds));                                 // Put back the DICOM attributes
+        }
+
+        // Print its modified DICOM attributes
+        System.out.println("Patient DICOM attributes in memory after modification:");
+        System.out.println(aPatient.getDecodedPat_attrs());
+
+        // Save in database the modified patient and print it again
+        Patient updatedPatient = patientDao.update(aPatient);
+
+        System.out.println("Patient DICOM attributes in database after update:");
+        System.out.println(updatedPatient.getDecodedPat_attrs());
+    }
+
     public static void testPatientDAO() {
 
         // Create a new Patient DAO
         DAO<Patient> patientDao = new PatientDAO();
-        // Take all patients in the database
         Patient pat = patientDao.find(1);
+        // Take all patients in the database
         List<Patient> patients = patientDao.findAll();
         System.out.println("I found " + patients.size() + "elements");
 
@@ -182,7 +221,7 @@ public class Metadata {
                 maxDicomTagsCount = ds.size();
             }
         }
-        System.out.println("The max number of DICOM tags int Patient is " + maxDicomTagsCount + "elements");
+        System.out.println("The max number of DICOM tags in Patient is " + maxDicomTagsCount + "elements");
 
         List<String> patientsName = new ArrayList<String>();
         int i = 1;
@@ -260,7 +299,7 @@ public class Metadata {
     }
 
     /**
-     * Test the patientDAO stuff
+     * Test the Mwl_itemDAO stuff
      */
     public static void testMwl_itemDAO() {
 
