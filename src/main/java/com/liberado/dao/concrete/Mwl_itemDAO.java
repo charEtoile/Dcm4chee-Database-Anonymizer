@@ -2,6 +2,7 @@ package com.liberado.dao.concrete;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import com.liberado.bean.Mwl_item;
@@ -109,12 +110,39 @@ public class Mwl_itemDAO extends DAO<Mwl_item> {
 
     @Override
     public Mwl_item update(Mwl_item obj) {
+
+        String stmt = "UPDATE mwl_item SET (patient_fk, spsStatus, sps_id, start_datetime, station_aet, " +
+                "station_name, modality, perf_physician, perf_phys_i_name, perf_phys_p_name, req_proc_id, " +
+                "accession_no, study_iuid, created_time, updated_time, item_attrs) = " +
+                "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) WHERE pk = ?;";
+
         try {
-            this.connect.createStatement(
-                    ResultSet.TYPE_SCROLL_INSENSITIVE,
-                    ResultSet.CONCUR_UPDATABLE).executeUpdate(
-                    "UPDATE mwl_item SET sps_id = '" + obj.getSps_id() + "'" +
-                            " WHERE pk = " + obj.getPk());
+            /*this.connect.createStatement(
+                                    ResultSet.TYPE_SCROLL_INSENSITIVE,
+                                    ResultSet.CONCUR_UPDATABLE).executeUpdate(stmt);*/
+            PreparedStatement ps = this.connect.prepareStatement(stmt, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+            ps.setLong(1, obj.getPatient_fk());
+            ps.setInt(2, obj.getSps_status());
+            ps.setString(3, obj.getSps_id());
+            ps.setTimestamp(4, obj.getStart_datetime());
+            ps.setString(5, obj.getStation_aet());
+            ps.setString(6, obj.getStation_name());
+            ps.setString(7, obj.getModality());
+            ps.setString(8, obj.getPerf_physician());
+            ps.setString(9, obj.getPerf_phys_i_name());
+            ps.setString(10, obj.getPerf_phys_p_name());
+            ps.setString(11, obj.getReq_proc_id());
+            ps.setString(12, obj.getAccession_no());
+            ps.setString(13, obj.getStudy_iuid());
+            ps.setTimestamp(14, obj.getCreated_time());
+            // Manually set the updated_time to the current time and also set it in the object
+            java.sql.Timestamp currentTimestamp = new java.sql.Timestamp(Calendar.getInstance().getTime().getTime());
+            obj.setUpdated_time(currentTimestamp);
+            ps.setTimestamp(15, currentTimestamp);
+            ps.setBytes(16, obj.getItem_attrs());
+            ps.setLong(17, obj.getPk());
+            ps.executeUpdate();
+            ps.close();
 
             obj = this.find(obj.getPk());
         } catch (SQLException e) {

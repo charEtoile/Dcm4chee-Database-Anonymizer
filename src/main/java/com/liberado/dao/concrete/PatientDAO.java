@@ -2,6 +2,7 @@ package com.liberado.dao.concrete;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.List;
 
 import com.liberado.bean.Patient;
@@ -110,8 +111,7 @@ public class PatientDAO extends DAO<Patient> {
 
         String stmt = "UPDATE patient SET (merge_fk, pat_id, pat_id_issuer, pat_name, pat_i_name, " +
                 "pat_p_name, pat_birthdate, pat_sex, pat_custom1, pat_custom2, pat_custom3, " +
-                //"created_time, updated_time," +
-                "pat_attrs) = (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) WHERE pk = 1;";
+                "created_time, updated_time, pat_attrs) = (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) WHERE pk = ?;";
 
         try {
             /*this.connect.createStatement(
@@ -129,9 +129,14 @@ public class PatientDAO extends DAO<Patient> {
             ps.setString(9, obj.getPat_custom1());
             ps.setString(10, obj.getPat_custom2());
             ps.setString(11, obj.getPat_custom3());
-            //private Timestamp created_time;
+            ps.setTimestamp(12, obj.getCreated_time());
+            // Manually set the updated_time to the current time and also set it in the object
+            java.sql.Timestamp currentTimestamp = new java.sql.Timestamp(Calendar.getInstance().getTime().getTime());
+            obj.setUpdated_time(currentTimestamp);
             //private Timestamp updated_time;
-            ps.setBytes(12, obj.getPat_attrs());
+            ps.setTimestamp(13, currentTimestamp);
+            ps.setBytes(14, obj.getPat_attrs());
+            ps.setLong(15, obj.getPk());
             ps.executeUpdate();
             ps.close();
 
