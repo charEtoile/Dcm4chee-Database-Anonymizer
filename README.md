@@ -1,4 +1,4 @@
-# parseDicomBlob
+# DCM4CHEE DATABASE ANONYMIZER
 little project to understand dicom blobs in dcm4chee v2 database
 
 Tags to anonymise and retrieved from DCM4CHEE and found in the configuration files:
