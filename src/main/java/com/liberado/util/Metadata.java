@@ -54,6 +54,32 @@ public class Metadata {
             //System.out.println(getDataset(args[0]));
         }
 
+        // Get patient array
+        System.out.println("--- Fetching all patients");
+        List<Patient> patients = findAllPatients();
+        System.out.println("Fetched " + patients.size() + " patients");
+
+        // Get mwl_item array
+        System.out.println("--- Fetching all mwl_items");
+        List<Mwl_item> mwl_items = findAllMwl_items();
+        System.out.println("Fetched " + mwl_items.size() + " mwl_items");
+
+        // Process a few verifications
+        for (int i = 0; i < mwl_items.size(); i++) {
+            Mwl_item mwl_item_iter = mwl_items.get(i);
+
+            // getPatient_fk should not be null
+            if (mwl_item_iter.getPatient_fk() == 0) {
+                System.out.println("WARNING: mwl_items[" + i + "].getPatient_fk() = 0");
+            }
+        }
+
+
+        // Build Person Name Array
+
+        // Mix the Person name Array
+
+
         //testPatientDAO();
         //testMwl_itemDAO();
         //testUpdatePatientInDatabase();
@@ -309,16 +335,12 @@ public class Metadata {
             // </mystuff>
         }
 
-
-
         //pat.setPat_name("toto");
         //patientDao.update(pat);
 
         //System.out.println("Patient après modif");
         //System.out.println(pat);
         //System.out.println(pat.getDecodedPat_attrs());
-
-
 
         /*byte[] blobDicom = rs.getBytes("pat_attrs");
         byte[] baDicom = Base64.encodeBase64(blobDicom);
@@ -434,5 +456,19 @@ public class Metadata {
         } catch (UnsupportedEncodingException e) {
             e.printStackTrace();
         }*/
+    }
+
+    private static List<Patient> findAllPatients() {
+        // Create a new Patient DAO and take all patients in the database
+        DAO<Patient> patientDao = new PatientDAO();
+        List<Patient> patients = patientDao.findAll();
+        return patients;
+    }
+
+    private static List<Mwl_item> findAllMwl_items() {
+        // Create a new Mwl_item DAO and take all mwl_items in the database
+        DAO<Mwl_item> mwl_itemDAO = new Mwl_itemDAO();
+        List<Mwl_item> mwl_items = mwl_itemDAO.findAll();
+        return mwl_items;
     }
 }
