@@ -167,7 +167,9 @@ public class Patient {
 
     @Override
     public String toString() {
-        return "PATIENT : pat_name = " + this.pat_name + " attrs.familyName = " + getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
+        return "PATIENT : pat_name = " + this.pat_name +
+                " FAMILY: " + getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY) +
+                " GIVEN: " + getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
     }
 
     public String getDecodedPat_attrs(){
@@ -204,7 +206,7 @@ public class Patient {
                 Dataset ds = fromByteArray(this.getPat_attrs());
                 PersonName personName = ds.getPersonName(Tags.PatientName);             // Extract the PersonName object
                 //aPatient.setPat_name(personName.get(PersonName.FAMILY));              // Modify in the column in 'clear'
-                personName.set(PersonName.FAMILY, name);                                // Modify in the PersonName object
+                personName.set(field, name);                                            // Modify in the PersonName object
                 ds.putPN(Tags.PatientName, personName);                                 // Modify in the DICOM dataset
                 setPat_attrs(toByteArray(ds));                                          // Put back the DICOM attributes
                 break;

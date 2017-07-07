@@ -58,6 +58,7 @@ public class Metadata {
         // Get patient array and copy it in another array
         System.out.println("--- Fetching all patients");
         List<Patient> patients = findAllPatients();
+        //fixPatientList(patients);System.exit(0);
         List<Patient> patients_copy = findAllPatients();
         System.out.println("Fetched " + patients.size() + " patients");
 
@@ -106,21 +107,43 @@ public class Metadata {
             do {
                 int randomPatientArrayIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
                 String nameAtRandomPatientArrayIndex = patients.get(randomPatientArrayIndex).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
-                if (originalName.equals(nameAtRandomPatientArrayIndex) == false) {
+                if (!originalName.equals(nameAtRandomPatientArrayIndex)) {
                     patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.FAMILY, nameAtRandomPatientArrayIndex);
                     loopAgain = false;
                 }
             }
-            while(loopAgain == true);
+            while(loopAgain);
+        }
+
+        // Loop through all patients
+        for (int i = 0; i < patients.size(); i++) {
+            // Take given name at current index
+            String originalName = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
+            boolean loopAgain = true;
+            do {
+                // take a random index
+                int randomPatientArrayIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
+                // test if iterated patient has same sex as randomly pointed one
+                if (!patients.get(i).getPat_sex().equals(patients.get(randomPatientArrayIndex).getPat_sex())) {
+                    String nameAtRandomPatientArrayIndex = patients.get(randomPatientArrayIndex).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
+                    if (!originalName.equals(nameAtRandomPatientArrayIndex)) {
+                        patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.GIVEN, nameAtRandomPatientArrayIndex);
+                        loopAgain = false;
+                        if (i == 4662)
+                        System.out.println("changing "+i);
+                    }
+                }
+            }
+            while(loopAgain);
         }
 
 
-
-
-        System.out.println("BEFORE - AFTER");
+        System.out.println("BEFORE === VS === AFTER");
         for (int i = 0; i < patients.size() && i < 50; i++) {
-            System.out.println(patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY) + " - " +
-            patients_copy.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY));
+            System.out.println(
+                    patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY) + " " + patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN) +
+                            " === VS === " +
+                    patients_copy.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY) + " " + patients_copy.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN));
         }
 
 
@@ -533,5 +556,21 @@ public class Metadata {
         DAO<Mwl_item> mwl_itemDAO = new Mwl_itemDAO();
         List<Mwl_item> mwl_items = mwl_itemDAO.findAll();
         return mwl_items;
+    }
+
+    private static void fixPatientList(List<Patient> patients) {
+        for (int i = 0; i < patients.size(); i++) {
+            String pat_name = patients.get(i).getPat_name();
+            String family = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
+            String given = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
+            String familyAndGiven = family + "^" + given;
+            if (family == null) {
+                System.out.println("WARNING: patients[" + i + "].FAMILY = null - " + patients.get(i).getPat_name());
+            }
+            if (given == null) {
+                System.out.println("WARNING: patients[" + i + "].GIVEN = null" + patients.get(i).getPat_name());
+            }
+
+        }
     }
 }
