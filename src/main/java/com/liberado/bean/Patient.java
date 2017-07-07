@@ -13,12 +13,19 @@ package com.liberado.bean;
 
 import java.sql.Timestamp;
 import com.liberado.util.Metadata;
+import org.dcm4che.data.Dataset;
+import org.dcm4che.data.PersonName;
+import org.dcm4che.dict.Tags;
+
+import static com.liberado.util.Metadata.fromByteArray;
+import static com.liberado.util.Metadata.toByteArray;
 
 /**
  * Created by admin on 21/06/2017.
  */
 public class Patient {
 
+    // Manual ORM
     private long pk = 0;
     private long merge_fk = 0;
     private String pat_id = "";
@@ -155,14 +162,52 @@ public class Patient {
         this.pat_attrs = pat_attrs;
     }
 
+    // Other methods
     public Patient(){}
 
     @Override
     public String toString() {
-        return "PATIENT : " + this.pat_name;
+        return "PATIENT : pat_name = " + this.pat_name + " attrs.familyName = " + getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
     }
 
     public String getDecodedPat_attrs(){
         return Metadata.getDataset(this.pat_attrs);
+    }
+
+    public String getPersonNameFieldFromDICOMAttributes(int field) {
+
+        String res = "";
+        Dataset ds = fromByteArray(this.getPat_attrs());
+        PersonName personName = ds.getPersonName(Tags.PatientName);
+
+        switch (field) {
+            case PersonName.FAMILY:
+            case PersonName.GIVEN:
+            case PersonName.MIDDLE:
+            case PersonName.PREFIX:
+            case PersonName.SUFFIX:
+                res = personName.get(field);
+                break;
+        }
+
+        return res;
+    }
+
+    public void setPersonNameFieldInDICOMAttributes(int field, String name) {
+
+        switch (field) {
+            case PersonName.FAMILY:
+            case PersonName.GIVEN:
+            case PersonName.MIDDLE:
+            case PersonName.PREFIX:
+            case PersonName.SUFFIX:
+                Dataset ds = fromByteArray(this.getPat_attrs());
+                PersonName personName = ds.getPersonName(Tags.PatientName);             // Extract the PersonName object
+                //aPatient.setPat_name(personName.get(PersonName.FAMILY));              // Modify in the column in 'clear'
+                personName.set(PersonName.FAMILY, name);                                // Modify in the PersonName object
+                ds.putPN(Tags.PatientName, personName);                                 // Modify in the DICOM dataset
+                setPat_attrs(toByteArray(ds));                                          // Put back the DICOM attributes
+                break;
+        }
     }
 }

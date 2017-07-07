@@ -36,6 +36,7 @@ import org.apache.commons.lang.CharSet;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.dcm4che.data.*;
 import org.dcm4che.dict.Tags;
+import java.util.concurrent.ThreadLocalRandom;
 
 
 /**
@@ -54,9 +55,10 @@ public class Metadata {
             //System.out.println(getDataset(args[0]));
         }
 
-        // Get patient array
+        // Get patient array and copy it in another array
         System.out.println("--- Fetching all patients");
         List<Patient> patients = findAllPatients();
+        List<Patient> patients_copy = findAllPatients();
         System.out.println("Fetched " + patients.size() + " patients");
 
         // Get mwl_item array
@@ -64,21 +66,82 @@ public class Metadata {
         List<Mwl_item> mwl_items = findAllMwl_items();
         System.out.println("Fetched " + mwl_items.size() + " mwl_items");
 
-        // Process a few verifications
+        // Process a few verifications (not efficient at all to loop through already "watched" indexes)
+        // and also useless since these checks might already be performed by postgresql with constraints
+        /*for (int j = 0; j < patients.size(); j++) {
+            Patient patient_iter = patients.get(j);
+            if (patient_iter.getMerge_fk() > 0) {
+                System.out.println("WARNING: patients[" + j + "].getMerge_fk() != 0");
+            }
+        }
         for (int i = 0; i < mwl_items.size(); i++) {
             Mwl_item mwl_item_iter = mwl_items.get(i);
 
             // getPatient_fk should not be null
-            if (mwl_item_iter.getPatient_fk() == 0) {
+            long patient_fk = mwl_item_iter.getPatient_fk();
+            if (patient_fk == 0) {
                 System.out.println("WARNING: mwl_items[" + i + "].getPatient_fk() = 0");
             }
+            else {
+                // There should be a corresponding patient
+                boolean found = false;
+                for (int j = 0; j < patients.size(); j++) {
+                    Patient patient_iter = patients.get(j);
+                    if (patient_iter.getPk() == patient_fk) {
+                        found = true;
+                        break;
+                    }
+                }
+                if (found == false) {
+                    System.out.println("WARNING: mwl_items[" + i + "].getPatient_fk() = " + patient_fk + " has no match in patient database");
+                }
+            }
+        }*/
+
+        // Duplicate person array FAMILY name modification
+        // for each index, randomize another index, change something with conditions
+        for (int i = 0; i < patients.size(); i++) {
+            String originalName = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
+            boolean loopAgain = true;
+            do {
+                int randomPatientArrayIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
+                String nameAtRandomPatientArrayIndex = patients.get(randomPatientArrayIndex).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
+                if (originalName.equals(nameAtRandomPatientArrayIndex) == false) {
+                    patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.FAMILY, nameAtRandomPatientArrayIndex);
+                    loopAgain = false;
+                }
+            }
+            while(loopAgain == true);
         }
 
 
-        // Build Person Name Array
+
+
+        System.out.println("BEFORE - AFTER");
+        for (int i = 0; i < patients.size() && i < 50; i++) {
+            System.out.println(patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY) + " - " +
+            patients_copy.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY));
+        }
+
+
+
+        // Build Person Name Array from all patients
+        /*List<PersonName> personNames = new ArrayList<PersonName>();
+        for (int i = 0; i < patients.size(); i++) {
+            Dataset ds = fromByteArray(patients.get(i).getPat_attrs());
+            ds.getPersonName(Tags.PatientName);
+        }
 
         // Mix the Person name Array
-
+        Dataset ds = fromByteArray(aPatient.getPat_attrs());
+        if (ds != null) {
+            PersonName personName = ds.getPersonName(Tags.PatientName);             // Extract the PersonName object
+            aPatient.setPat_name(personName.get(PersonName.FAMILY));                // Modify in the column in 'clear'
+            personName.set(PersonName.FAMILY, aPatient.getPat_name());              // Modify in the PersonName object
+            ds.putPN(Tags.PatientName, personName);                                 // Modify in the DICOM dataset
+            aPatient.setPat_attrs(toByteArray(ds));                                 // Put back the DICOM attributes
+        }
+*/
 
         //testPatientDAO();
         //testMwl_itemDAO();
