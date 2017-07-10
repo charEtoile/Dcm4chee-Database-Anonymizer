@@ -32,10 +32,10 @@ import com.liberado.dao.DAO;
 import com.liberado.dao.concrete.Mwl_itemDAO;
 import com.liberado.dao.concrete.PatientDAO;
 import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.CharSet;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.dcm4che.data.*;
 import org.dcm4che.dict.Tags;
+
 import java.util.concurrent.ThreadLocalRandom;
 
 
@@ -46,7 +46,7 @@ import java.util.concurrent.ThreadLocalRandom;
  */
 public class Metadata {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
         // Check length of arguments passed to main
         if (args.length != 1) {
@@ -55,10 +55,37 @@ public class Metadata {
             //System.out.println(getDataset(args[0]));
         }
 
+        // Build a list of some tags that we want to modify be cause they could identify a person
+        List<DcmElementOccurenceCount> list = new ArrayList<DcmElementOccurenceCount>() {
+            {
+                add(new DcmElementOccurenceCount(Tags.PatientName));
+                add(new DcmElementOccurenceCount(Tags.PatientBirthDate));
+                add(new DcmElementOccurenceCount(Tags.PatientBirthName));
+                add(new DcmElementOccurenceCount(Tags.PatientBirthTime));
+                add(new DcmElementOccurenceCount(Tags.PersonAddress));
+                add(new DcmElementOccurenceCount(Tags.OtherPatientNames));
+                add(new DcmElementOccurenceCount(Tags.PatientMotherBirthName));
+                add(new DcmElementOccurenceCount(Tags.PatientPhoneNumbers));
+                add(new DcmElementOccurenceCount(Tags.PersonAddress));
+                add(new DcmElementOccurenceCount(Tags.ReferringPhysicianAddress));
+                add(new DcmElementOccurenceCount(Tags.ReferringPhysicianName));
+                add(new DcmElementOccurenceCount(Tags.NameOfPhysicianReadingStudy));
+                add(new DcmElementOccurenceCount(Tags.ReferringPhysicianPhoneNumbers));
+                add(new DcmElementOccurenceCount(Tags.PersonTelephoneNumbers));
+                add(new DcmElementOccurenceCount(Tags.OrderCallbackPhoneNumber));
+                add(new DcmElementOccurenceCount(Tags.OperatorName));
+                add(new DcmElementOccurenceCount(Tags.PerformingPhysicianName));
+                add(new DcmElementOccurenceCount(Tags.ScheduledPerformingPhysicianName));
+                add(new DcmElementOccurenceCount(Tags.HumanPerformerName));
+                add(new DcmElementOccurenceCount(Tags.VerifyingObserverName));
+                add(new DcmElementOccurenceCount(Tags.PersonName));
+                add(new DcmElementOccurenceCount(Tags.ContactDisplayName));
+            }
+        };
+
         // Get patient array and copy it in another array
         System.out.println("--- Fetching all patients");
         List<Patient> patients = findAllPatients();
-        //fixPatientList(patients);System.exit(0);
         List<Patient> patients_copy = findAllPatients();
         System.out.println("Fetched " + patients.size() + " patients");
 
@@ -67,74 +94,78 @@ public class Metadata {
         List<Mwl_item> mwl_items = findAllMwl_items();
         System.out.println("Fetched " + mwl_items.size() + " mwl_items");
 
-        // Process a few verifications (not efficient at all to loop through already "watched" indexes)
-        // and also useless since these checks might already be performed by postgresql with constraints
-        /*for (int j = 0; j < patients.size(); j++) {
-            Patient patient_iter = patients.get(j);
-            if (patient_iter.getMerge_fk() > 0) {
-                System.out.println("WARNING: patients[" + j + "].getMerge_fk() != 0");
+        // Check presence of some tags in patient and mwl_item arrays and print the result
+        for (int i = 0; i < patients.size(); i++) {
+            Dataset ds = fromByteArray(patients.get(i).getPat_attrs());
+
+            for (int j = 0; j < list.size(); j++) {
+                if (ds.containsValue(list.get(j).getTag())) {
+                    list.get(j).setCount(list.get(j).getCount() + 1);
+                }
             }
         }
+
         for (int i = 0; i < mwl_items.size(); i++) {
-            Mwl_item mwl_item_iter = mwl_items.get(i);
+            Dataset ds = fromByteArray(mwl_items.get(i).getItem_attrs());
 
-            // getPatient_fk should not be null
-            long patient_fk = mwl_item_iter.getPatient_fk();
-            if (patient_fk == 0) {
-                System.out.println("WARNING: mwl_items[" + i + "].getPatient_fk() = 0");
-            }
-            else {
-                // There should be a corresponding patient
-                boolean found = false;
-                for (int j = 0; j < patients.size(); j++) {
-                    Patient patient_iter = patients.get(j);
-                    if (patient_iter.getPk() == patient_fk) {
-                        found = true;
-                        break;
-                    }
-                }
-                if (found == false) {
-                    System.out.println("WARNING: mwl_items[" + i + "].getPatient_fk() = " + patient_fk + " has no match in patient database");
+            for (int j = 0; j < list.size(); j++) {
+                if (ds.containsValue(list.get(j).getTag())) {
+                    list.get(j).setCount(list.get(j).getCount() + 1);
                 }
             }
-        }*/
+        }
 
-        // Duplicate person array FAMILY name modification
+        for (int j = 0; j < list.size(); j++) {
+            System.out.println(list.get(j).toString());
+        }
+
+        // Change FAMILY Name and GIVEN name
         // for each index, randomize another index, change something with conditions
         for (int i = 0; i < patients.size(); i++) {
-            String originalName = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
+            String familyName = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
             boolean loopAgain = true;
+            int randomFamilyNameIndex = 0;
             do {
-                int randomPatientArrayIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
-                String nameAtRandomPatientArrayIndex = patients.get(randomPatientArrayIndex).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
-                if (!originalName.equals(nameAtRandomPatientArrayIndex)) {
-                    patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.FAMILY, nameAtRandomPatientArrayIndex);
+                randomFamilyNameIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
+                String nameAtRandomFamilyNameIndex = patients.get(randomFamilyNameIndex).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY);
+                if (!familyName.equals(nameAtRandomFamilyNameIndex)) {
+                    patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.FAMILY, nameAtRandomFamilyNameIndex);
                     loopAgain = false;
                 }
             }
             while(loopAgain);
-        }
 
-        // Loop through all patients
-        for (int i = 0; i < patients.size(); i++) {
-            // Take given name at current index
-            String originalName = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
-            boolean loopAgain = true;
+            // Change Given name only if same sex and do not pick up the same given name that was randomly picked up for family name
+            String givenName = patients.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
+            loopAgain = true;
+            int randomGivenNameIndex = 0;
             do {
-                // take a random index
-                int randomPatientArrayIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
+                randomGivenNameIndex = ThreadLocalRandom.current().nextInt(0, patients.size());
                 // test if iterated patient has same sex as randomly pointed one
-                if (!patients.get(i).getPat_sex().equals(patients.get(randomPatientArrayIndex).getPat_sex())) {
-                    String nameAtRandomPatientArrayIndex = patients.get(randomPatientArrayIndex).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
-                    if (!originalName.equals(nameAtRandomPatientArrayIndex)) {
-                        patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.GIVEN, nameAtRandomPatientArrayIndex);
+                if (randomGivenNameIndex != randomFamilyNameIndex &&
+                        !patients.get(i).getPat_sex().equals(patients.get(randomGivenNameIndex).getPat_sex())) {
+                    String nameAtRandomGivenNameIndex = patients.get(randomGivenNameIndex).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN);
+                    // Apply random name to current only if different
+                    if (!givenName.equals(nameAtRandomGivenNameIndex)) {
+                        patients_copy.get(i).setPersonNameFieldInDICOMAttributes(PersonName.GIVEN, nameAtRandomGivenNameIndex);
                         loopAgain = false;
-                        if (i == 4662)
-                        System.out.println("changing "+i);
                     }
                 }
             }
             while(loopAgain);
+        }
+
+        List<String> physicians = new ArrayList<String>();
+        for (int i = 0; i < mwl_items.size(); i++) {
+            Dataset ds = fromByteArray(mwl_items.get(i).getItem_attrs());
+            PersonName physician = ds.getPersonName(Tags.ReferringPhysicianName);
+            if (!physicians.contains(physician.toString())) {
+                physicians.add(physician.toString());
+            }
+        }
+        for (int i = 0; i < physicians.size(); i++) {
+            System.out.println("=== Found : " + physicians.size() + " physicians.");
+            System.out.println(physicians.get(i).toString());
         }
 
 
@@ -146,61 +177,13 @@ public class Metadata {
                     patients_copy.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.FAMILY) + " " + patients_copy.get(i).getPersonNameFieldFromDICOMAttributes(PersonName.GIVEN));
         }
 
-
-
-        // Build Person Name Array from all patients
-        /*List<PersonName> personNames = new ArrayList<PersonName>();
-        for (int i = 0; i < patients.size(); i++) {
-            Dataset ds = fromByteArray(patients.get(i).getPat_attrs());
-            ds.getPersonName(Tags.PatientName);
+        System.out.println("pat_name === VS === personName");
+        for (int i = 0; i < patients_copy.size() && i < 50; i++) {
+            System.out.println(
+                    patients_copy.get(i).getPat_name() +
+                            " === VS === " +
+                    patients_copy.get(i).getPersonName());
         }
-
-        // Mix the Person name Array
-        Dataset ds = fromByteArray(aPatient.getPat_attrs());
-        if (ds != null) {
-            PersonName personName = ds.getPersonName(Tags.PatientName);             // Extract the PersonName object
-            aPatient.setPat_name(personName.get(PersonName.FAMILY));                // Modify in the column in 'clear'
-            personName.set(PersonName.FAMILY, aPatient.getPat_name());              // Modify in the PersonName object
-            ds.putPN(Tags.PatientName, personName);                                 // Modify in the DICOM dataset
-            aPatient.setPat_attrs(toByteArray(ds));                                 // Put back the DICOM attributes
-        }
-*/
-
-        //testPatientDAO();
-        //testMwl_itemDAO();
-        //testUpdatePatientInDatabase();
-
-        // Patient Tags
-        //Tags.PatientName;
-        //Tags.PatientBirthDate;
-        //Tags.PatientBirthName;
-        //Tags.PatientBirthTime;
-        //Tags.PatientAddress;
-        //Tags.OtherPatientNames;
-        //Tags.PatientMotherBirthName;
-        //Tags.PatientPhoneNumbers;
-        //Tags.ReferringPhysicianAddress
-        //Tags.PersonAddress
-
-        // Study Tags
-        //Tags.StudyDate;
-        //Tags.StudyTime;
-        //Tags.ReferringPhysicianName;
-        //Tags.NameOfPhysicianReadingStudy
-        //Tags.ReferringPhysicianPhoneNumbers
-        //Tags.PersonTelephoneNumbers
-        //Tags.OrderCallbackPhoneNumber
-
-        // Series Tags
-        //Tags.OperatorName;
-        //Tags.PerformingPhysicianName;
-        //Tags.ScheduledPerformingPhysicianName;
-        //Tags.HumanPerformerName;
-        //Tags.VerifyingObserverName;
-        //Tags.PersonName;
-        //Tags.ContactDisplayName;
-
-        //
     }
 
     /**
@@ -505,35 +488,6 @@ public class Metadata {
         0102 (0010,0040) CS #2 *1 [M ] //Patient's Sex
         */
 
-/*
-        // Get the Dataset from the patient byte array. Note : interface Dataset extends DcmObject, Serializable
-        Dataset ds = fromByteArray(pat.getPat_attrs());
-
-        if (ds != null) {
-
-            // <mystuff>
-            PersonName personName = ds.getPersonName(Tags.PatientName);
-            System.out.println("avant:" + personName.toString());
-            personName.set(PersonName.FAMILY, "TOTO");
-            System.out.println("apres:" + personName.toString());
-            ds.putCS(Tags.PatientName, personName.toString());
-            pat.setPat_attrs(toByteArray(ds));
-
-            System.out.println("Patient apres modif");
-            System.out.println(pat.getDecodedPat_attrs());
-
-            // </mystuff>
-        }
-*/
-
-
-        //pat.setPat_name("toto");
-        //patientDao.update(pat);
-
-        //System.out.println("Patient après modif");
-        //System.out.println(pat);
-        //System.out.println(pat.getDecodedPat_attrs());
-
         /*byte[] blobDicom = rs.getBytes("pat_attrs");
         byte[] baDicom = Base64.encodeBase64(blobDicom);
         String data = null;
@@ -570,7 +524,6 @@ public class Metadata {
             if (given == null) {
                 System.out.println("WARNING: patients[" + i + "].GIVEN = null" + patients.get(i).getPat_name());
             }
-
         }
     }
 }

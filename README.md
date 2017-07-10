@@ -5,7 +5,8 @@ Tags to anonymise and retrieved from DCM4CHEE and found in the configuration fil
 
 https://dcm4che.atlassian.net/wiki/display/ee2/DICOM+Attribute+Filter
 https://groups.google.com/forum/#!topic/dcm4che/zkT4O7ZOY6c
-
+The following website could also be used to find Person Name value representation:
+https://www.dicomlibrary.com/dicom/dicom-tags/
 
     <dcm4chee-attribute-filter>
         <patient>
@@ -37,3 +38,7 @@ https://groups.google.com/forum/#!topic/dcm4che/zkT4O7ZOY6c
                  <attr tag="00700084"/> <!-- Content Creator s Name -->
          </instance>
     </dcm4chee-attribute-filter>
+
+We could also develop a plugin using this :
+https://www.javacodegeeks.com/2012/10/introduction-to-postgresql-pljava.html
+https://tada.github.io/pljava/

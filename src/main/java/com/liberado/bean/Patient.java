@@ -176,6 +176,14 @@ public class Patient {
         return Metadata.getDataset(this.pat_attrs);
     }
 
+    public String getPersonName() {
+
+        Dataset ds = fromByteArray(this.getPat_attrs());
+        PersonName personName = ds.getPersonName(Tags.PatientName);
+
+        return personName.toString();
+    }
+
     public String getPersonNameFieldFromDICOMAttributes(int field) {
 
         String res = "";
